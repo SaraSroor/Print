@@ -1,0 +1,304 @@
+﻿@page
+@model print.Pages.IndexModel
+@{
+    ViewData["Title"] = "برنامج مركز الطباعه";
+}
+
+<h2>إدخال البيانات</h2>
+<form method="post">
+    <label>القطاع:</label>
+    <select name="SelectedBranch" class="form-control" onchange="this.form.submit()">
+        <option value="">اختر القطاع</option>
+        @foreach (var branch in Model.Branches)
+        {
+            <option value="@branch" selected="@(branch == Model.SelectedBranch)">@branch</option>
+        }
+    </select>
+
+
+    <label>الهندسة:</label>
+    <select name="SelectedHndsa" class="form-control">
+        @if (string.IsNullOrWhiteSpace(Model.SelectedBranch))
+        {
+            <option value="">برجاء اختيار الفرع لعرض الهندسات</option>
+        }
+        else if (Model.HndsaByBranch.TryGetValue(Model.SelectedBranch, out var hndsas))
+        {
+            <option value="">اختر الهندسة</option>
+            foreach (var h in hndsas)
+            {
+                <option value="@h" selected="@(h == Model.SelectedHndsa)">@h</option>
+            }
+        }
+    </select>
+
+
+   @*  <label>الهندسة:</label>
+    <select name="SelectedHndsa" class="form-control">
+        <option value="">اختر الهندسة</option>
+        @if (Model.HndsaByBranch.ContainsKey(Model.SelectedBranch))
+        {
+            foreach (var h in Model.HndsaByBranch[Model.SelectedBranch])
+            {
+                <option value="@h" selected="@(h == Model.SelectedHndsa)">@h</option>
+            }
+        }
+    </select> *@
+
+    <label>نوع البيان:</label>
+    <input asp-for="Type" class="form-control" />
+    <label>الكمية:</label>
+    <input asp-for="Quantity" type="number" class="form-control" />
+    <label>المواصفات:</label>
+    <input asp-for="Specifications" class="form-control" />
+    <label>المنصرف:</label>
+    <input asp-for="Dispensed" type="number" step="1.00" class="form-control" />
+    <label>الباقي:</label>
+    <input asp-for="Remaining" type="number" step="1.00" class="form-control" />
+
+    <button type="submit" asp-page-handler="Save" class="btn btn-primary mt-2">حفظ</button>
+    <button type="submit" asp-page-handler="ShowReport" class="btn btn-secondary mt-2">عرض التقرير</button>
+</form>
+
+@* @if (Model.ReportEntries.Any())
+{
+    <h2>التقرير</h2>
+    <table class="table table-bordered">
+        <thead>
+            <tr><th>الفرع</th><th>الهندسة</th><th>نوع البيان</th><th>الكمية</th><th>المواصفات</th><th>المنصرف</th><th>الباقي</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Model.ReportEntries)
+            {
+                <tr>
+                    <td>@row.Branch</td>
+                    <td>@row.Hndsa</td>
+                    <td>@row.Type</td>
+                    <td>@row.Quantity</td>
+                    <td>@row.Specs</td>
+                    <td>@row.Dispensed</td>
+                    <td>@row.Remaining</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+} *@
+
+
+
+
+@if (Model.ReportEntries.Any())
+{
+    <h2>التقرير</h2>
+
+    <div class="mb-3">
+@*         <button type="button" class="btn btn-outline-primary" onclick="generatePDF()">طباعة</button>
+ *@
+        <button type="button" class="btn btn-outline-primary" onclick="printReport()">طباعة</button>
+        <button type="button" class="btn btn-outline-success" onclick="exportToExcel()">تصدير إلى Excel</button>
+    </div>
+
+    <div id="report-container">
+        <table class="table table-bordered" id="report-table">
+            <thead>
+                <tr>
+                    <th>الفرع</th>
+                    <th>الهندسة</th>
+                    <th>نوع البيان</th>
+                    <th>الكمية</th>
+                    <th>المواصفات</th>
+                    <th>المنصرف</th>
+                    <th>الباقي</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.ReportEntries)
+                {
+                    <tr>
+                        <td>@row.Branch</td>
+                        <td>@row.Hndsa</td>
+                        <td>@row.Type</td>
+                        <td>@row.Quantity</td>
+                        <td>@row.Specs</td>
+                        <td>@row.Dispensed</td>
+                        <td>@row.Remaining</td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+}
+
+@section Scripts {
+    <script>
+
+        // async function generatePDF() {
+        //     const { jsPDF } = window.jspdf;
+        //     const doc = new jsPDF('p', 'pt', 'a4');
+
+        //     const reportContainer = document.getElementById('report-container');
+
+        //     // Use html2canvas to render reportContainer to canvas
+        //     await html2canvas(reportContainer, {
+        //         scale: 2
+        //     }).then(canvas => {
+        //         const imgData = canvas.toDataURL('image/png');
+        //         const imgProps = doc.getImageProperties(imgData);
+        //         const pdfWidth = doc.internal.pageSize.getWidth();
+        //         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        //         doc.addImage(imgData, 'PNG', 20, 20, pdfWidth - 40, pdfHeight);
+        //         doc.save("report.pdf");
+        //     });
+        // }
+
+        function printReport() {
+            const printContents = document.getElementById('report-container').innerHTML;
+            const originalContents = document.body.innerHTML;
+
+            document.body.innerHTML = printContents;
+            window.print();
+            document.body.innerHTML = originalContents;
+            location.reload(); // restore JS functionality
+        }
+
+        function exportToExcel() {
+            let table = document.getElementById("report-table");
+            let html = table.outerHTML;
+
+            let url = 'data:application/vnd.ms-excel,' + encodeURIComponent(html);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = 'Report.xls';
+            a.click();
+        }
+    </script>
+}
+
+
+
+
+
+
+
+@* @section Scripts {
+ 
+    <script>
+        function printReport() {
+            var content = document.getElementById("report-container").innerHTML;
+            var printWindow = window.open('', '', 'height=800,width=1000');
+            printWindow.document.write('<html><head><title>طباعة التقرير</title>');
+            printWindow.document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(content);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        function exportToExcel() {
+            var table = document.getElementById("report-table");
+            var html = table.outerHTML;
+
+            var uri = 'data:application/vnd.ms-excel;base64,';
+            var template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+                'xmlns:x="urn:schemas-microsoft-com:office:excel" ' +
+                'xmlns="http://www.w3.org/TR/REC-html40">' +
+                '<head><meta charset="UTF-8"></head><body><table>{table}</table></body></html>';
+
+            var base64 = function (s) {
+                return window.btoa(unescape(encodeURIComponent(s)))
+            };
+            var format = function (s, c) {
+                return s.replace(/{(\w+)}/g, function (m, p) {
+                    return c[p];
+                })
+            };
+
+            var ctx = { table: table.innerHTML };
+            var link = document.createElement("a");
+            link.download = "التقرير.xlsx";
+            link.href = uri + base64(format(template, ctx));
+            link.click();
+        }
+    </script>
+} *@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@* @page
+@model IndexModel
+@* @{
+    ViewData["Title"] = "Home page";
+} 
+
+@{
+    ViewData["Title"] = "Data Entry & Report";
+}
+
+<h2>Data Entry</h2>
+<form method="post">
+    <label>Sector:</label>
+    <select asp-for="SelectedSector" asp-items="@(new SelectList(Model.Sectors))" onchange="this.form.submit()"></select>
+    <label>Branch:</label>
+    <select asp-for="SelectedBranch">
+        @if (Model.BranchesBySector.ContainsKey(Model.SelectedSector))
+        {
+            foreach (var b in Model.BranchesBySector[Model.SelectedSector])
+            {
+                <option value="@b">@b</option>
+            }
+        }
+    </select>
+
+    <input asp-for="Type" placeholder="نوع البيان" required />
+    <input asp-for="Quantity" type="number" placeholder="الكميه" required />
+    <input asp-for="Specifications" placeholder="المواصفات" required />
+    <input asp-for="Dispensed" type="number" step="0.01" placeholder="المنصرف" required />
+    <input asp-for="Remaining" type="number" step="0.01" placeholder="الباقي" required />
+
+    <button type="submit" formaction="?handler=Save">Save</button>
+    <button type="submit" formaction="?handler=ShowReport">Show Report</button>
+</form>
+
+@if (Model.ReportEntries != null)
+{
+    <h2>Report</h2>
+    <table>
+        <thead>
+            <tr><th>Branch</th><th>Sector</th><th>Type</th><th>Quantity</th><th>Specs</th><th>Dispensed</th><th>Remaining</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var e in Model.ReportEntries)
+            {
+                <tr>
+                    <td>@e.Branch</td>
+                    <td>@e.Sector</td>
+                    <td>@e.Type</td>
+                    <td>@e.Quantity</td>
+                    <td>@e.Specs</td>
+                    <td>@e.Dispensed</td>
+                    <td>@e.Remaining</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+ *@
